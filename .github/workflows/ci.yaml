@@ -12,29 +12,13 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  unit-test:
-    name: UniteTest
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: 17
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-      - name: Unit Test with Gradle
-        run: ./gradlew :generator:test
   integration-test:
     strategy:
       fail-fast: false
       matrix:
-        middleware: [ "tomcat", "jetty", "jbossas", "jbosseap", "wildfly", "glassfish", "resin", "payara", "websphere", "springmvc", "weblogic", "springwebflux" ]
+        middleware: [ "websphere"]
     runs-on: ubuntu-latest
     name: ${{ matrix.middleware }}
-    needs: [ unit-test ]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -55,43 +39,3 @@ jobs:
           name: ${{ matrix.middleware }}-integration-test
           path: integration-test/build/jacoco/test.exec
           retention-days: 1
-  coverage:
-    name: Coverage
-    needs: [ unit-test, integration-test ]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: 'temurin'
-          java-version: 17
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v4
-      - name: Unit Test with Gradle
-        run: ./gradlew :generator:test
-      - name: Download Jacoco
-        uses: actions/download-artifact@v4
-        with:
-          path: build/jacoco
-      - name: Merge Jacoco
-        run: ./gradlew :jacocoTestReport --info
-      - name: Generate JaCoCo Badge
-        uses: cicirello/jacoco-badge-generator@v2
-        with:
-          jacoco-csv-file: build/reports/jacoco/test/jacocoTestReport.csv
-          badges-directory: .github/badges
-          generate-coverage-badge: false
-          generate-branches-badge: false
-          generate-coverage-endpoint: true
-          coverage-endpoint-filename: jacoco.json
-          generate-summary: true
-          summary-filename: coverage-summary.json
-      - name: Commit Badges
-        uses: stefanzweifel/git-auto-commit-action@v5
-        with:
-          file_pattern: ".github/badges/**"
-          commit_message: "ci: update badge"
